@@ -13,7 +13,7 @@ class TenantService extends GlobalService {
   }
 
 
-  async getTenantById(tenantId, populateFields = 'subscription.planId') {
+  async getTenantById(tenantId, populateFields = null) {
     return await this.getById(
       tenantId,
       { populate: populateFields },
@@ -26,7 +26,7 @@ class TenantService extends GlobalService {
   async getTenantByConditions(condition, removeFields = '') {
     return await this.getOneByConditions(
       condition,
-      { populate: 'subscription.planId', select: removeFields },
+      { select: removeFields },
       null,
       true // bypass
     );
@@ -36,7 +36,7 @@ class TenantService extends GlobalService {
   async getTenantBySlug(slug) {
     return await this.getOneByConditions(
       { slug: slug.toLowerCase(), status: 'ACTIVE' },
-      { populate: 'subscription.planId' },
+      {},
       null,
       true // bypass
     );
@@ -64,7 +64,7 @@ class TenantService extends GlobalService {
       query,
       page,
       limit,
-      { sort: { createdAt: -1 }, populate: 'subscription.planId' },
+      { sort: { createdAt: -1 } },
       null,
       true // bypass
     );
@@ -108,7 +108,7 @@ class TenantService extends GlobalService {
       ...data,
       addedUser: userId,
       modifiedUser: userId
-    }, { populate: 'subscription.planId' });
+    }, {});
   }
 
   
@@ -148,7 +148,7 @@ class TenantService extends GlobalService {
         ...data,
         modifiedUser: userId
       },
-      { populate: 'subscription.planId' },
+      {},
       null,
       true // bypass
     );
@@ -177,7 +177,7 @@ class TenantService extends GlobalService {
         subscription: subscriptionData,
         modifiedUser: userId
       },
-      { populate: 'subscription.planId' },
+      {},
       null,
       true // bypass
     );

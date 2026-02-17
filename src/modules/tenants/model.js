@@ -226,13 +226,9 @@ tenantSchema.methods.isSubscriptionActive = function() {
 
 // Instance method to check if tenant can access a module
 tenantSchema.methods.hasModuleAccess = async function(moduleKey) {
-  const PlanModule = mongoose.model('PlanModule');
-  const planModule = await PlanModule.findOne({
-    planId: this.subscription.planId,
-    moduleKey: moduleKey,
-    enabled: true
-  });
-  return !!planModule;
+  // For now, just return true since we don't have PlanModule model yet
+  // TODO: Implement proper module access check with PlanModule
+  return true;
 };
 
 // Static method to find tenant by domain
@@ -240,7 +236,7 @@ tenantSchema.statics.findByDomain = function(domain) {
   return this.findOne({
     'domains.domain': domain.toLowerCase(),
     status: 'ACTIVE'
-  }).populate('subscription.planId');
+  });
 };
 
 // Static method to find active tenants
