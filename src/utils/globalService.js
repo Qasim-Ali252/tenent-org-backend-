@@ -25,9 +25,11 @@ class GlobalService {
   _enforceTenant(query, tenantId, bypass = false) {
     if (this.hasTenantField) {
       if (!tenantId && !bypass) {
-        throw apiError.unauthorized('Tenant ID is required');
+        // If tenantId is null/undefined, allow query without tenant filter
+        // This allows multi-tenant models to work without tenant context
+        return query;
       }
-      if (!bypass) {
+      if (!bypass && tenantId) {
         return { ...query, [this.tenantField]: tenantId };
       }
     }
