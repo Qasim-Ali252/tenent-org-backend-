@@ -72,13 +72,7 @@ const organizationSettingsSchema = new mongoose.Schema({
   
   endDate: {
     type: Date,
-    required: [true, 'Subscription end date is required'],
-    validate: {
-      validator: function(value) {
-        return value > this.startDate;
-      },
-      message: 'End date must be after start date'
-    }
+    required: [true, 'Subscription end date is required']
   },
   
   billingCycle: {
@@ -224,11 +218,9 @@ organizationSettingsSchema.statics.existsForTenant = async function(tenantId) {
 
 organizationSettingsSchema.pre('save', function(next) {
   // Ensure dates are valid
-  if (this.isModified('startDate') || this.isModified('endDate')) {
-    if (this.endDate <= this.startDate) {
-      next(new Error('End date must be after start date'));
-      return;
-    }
+  if (this.endDate <= this.startDate) {
+    next(new Error('End date must be after start date'));
+    return;
   }
   
   // Round percentages to 2 decimal places
@@ -245,6 +237,28 @@ organizationSettingsSchema.pre('save', function(next) {
   }
   if (this.isModified('baseDeliveryCharges')) {
     this.baseDeliveryCharges = Math.round(this.baseDeliveryCharges * 100) / 100;
+  }
+  
+  next();
+});
+
+// Pre-update middleware to validate dates on updates
+organizationSettingsSchema.pre('findOneAndUpdate', async function(next) {
+  const update = this.getUpdate();
+  
+  // Only validate if dates are being updated
+  if (update.startDate || update.endDate || update.$set?.startDate || update.$set?.endDate) {
+    // Get the current document
+    const docToUpdate = await this.model.findOne(this.getQuery());
+    
+    if (docToUpdate) {
+      const newStartDate = update.startDate || update.$set?.startDate || docToUpdate.startDate;
+      const newEndDate = update.endDate || update.$set?.endDate || docToUpdate.endDate;
+      
+      if (new Date(newEndDate) <= new Date(newStartDate)) {
+        return next(new Error('End date must be after start date'));
+      }
+    }
   }
   
   next();

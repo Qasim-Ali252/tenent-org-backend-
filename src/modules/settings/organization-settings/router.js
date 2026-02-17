@@ -1,49 +1,42 @@
 import { Router } from 'express';
 import controller from './controller.js';
-// import { isAuthorized } from '../../../middleware/index.js'; // TEMPORARILY DISABLED FOR TESTING
+import isAuthorized from '../../../middleware/auth.js';
 
 const router = Router();
 
 /**
- * organization settings Routes
- * âš ï¸ WARNING: Authentication temporarily disabled for testing
- * TODO: Re-enable isAuthorized middleware before production deployment
+ * Organization Settings Routes
+ * All routes are protected with authentication
+ * 
+ * Note: Each tenant has exactly ONE settings record (enforced by unique index)
+ * All operations use tenantId as the identifier
  */
 
 // Get settings by tenant ID
-router.get('/:tenantId', controller.getByTenant);
-
-// Get settings by ID
-router.get('/detail/:id', controller.getById);
+router.get('/:tenantId', isAuthorized, controller.getByTenant);
 
 // Create organization settings
-router.post('/', controller.create);
+router.post('/', isAuthorized, controller.create);
 
-// Update organization settings
-router.put('/:id', controller.update);
+// Update entire settings (by tenant ID)
+router.put('/:tenantId', isAuthorized, controller.update);
 
-// Update specific section
-router.patch('/:id/section', controller.updateSection);
+// Update specific field(s) - handles logo, sections, or any field
+router.patch('/:tenantId', isAuthorized, controller.updateFields);
 
-// Update logo
-router.patch('/:id/logo', controller.updateLogo);
+// Restore archived settings (by tenant ID)
+router.patch('/:tenantId/restore', isAuthorized, controller.restoreSettings);
 
-// Delete logo
-router.delete('/:id/logo', controller.deleteLogo);
-
-// Restore archived settings
-router.patch('/:id/restore', controller.restoreSettings);
-
-// Delete settings (soft delete)
-router.delete('/:id', controller.deleteSettings);
+// Delete settings - soft delete (by tenant ID)
+router.delete('/:tenantId', isAuthorized, controller.deleteSettings);
 
 // Get subscription status
-router.get('/:tenantId/subscription-status', controller.getSubscriptionStatus);
+router.get('/:tenantId/subscription-status', isAuthorized, controller.getSubscriptionStatus);
 
 // Calculate order charges
-router.post('/:tenantId/calculate-charges', controller.calculateCharges);
+router.post('/:tenantId/calculate-charges', isAuthorized, controller.calculateCharges);
 
 // Validate order value
-router.post('/:tenantId/validate-order', controller.validateOrder);
+router.post('/:tenantId/validate-order', isAuthorized, controller.validateOrder);
 
 export default router;

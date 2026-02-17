@@ -7,7 +7,9 @@ import Joi from 'joi';
 // Create organization settings validation
 export const validateCreateorganizationSettings = (data) => {
   const schema = Joi.object({
+    // Testing fields (temporarily allowed for auth bypass)
     tenantId: Joi.string().optional(), // Optional as it can come from req.user
+    userId: Joi.string().optional(), // Optional for testing without auth
     
     // Basic Information
     organizationName: Joi.string().min(2).max(200).required().trim().messages({
@@ -91,6 +93,10 @@ export const validateCreateorganizationSettings = (data) => {
 // Update organization settings validation
 export const validateUpdateorganizationSettings = (data) => {
   const schema = Joi.object({
+    // Testing fields (temporarily allowed for auth bypass)
+    tenantId: Joi.string().optional(),
+    userId: Joi.string().optional(),
+    
     // Basic Information
     organizationName: Joi.string().min(2).max(200).optional().trim().messages({
       'string.min': 'Organization name must be at least 2 characters',

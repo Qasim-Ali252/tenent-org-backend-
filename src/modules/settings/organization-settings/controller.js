@@ -16,7 +16,7 @@ import {
 
 /**
  * Get organization settings by tenant ID
- * GET /api/v1/practice-settings/:tenantId
+ * GET /api/v1/organization-settings/:tenantId
  */
 export const getByTenant = async (req, res, next) => {
   try {
@@ -40,34 +40,8 @@ export const getByTenant = async (req, res, next) => {
 };
 
 /**
- * Get organization settings by ID
- * GET /api/v1/practice-settings/detail/:id
- */
-export const getById = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const tenantId = req.user?.tenantOrgId;
-
-    const settings = await organizationSettingsService.getSettingsById(id, tenantId);
-
-    if (!settings) {
-      return next(apiError.notFound('organization settings not found'));
-    }
-
-    return res.status(200).send({
-      isSuccess: true,
-      message: 'organization settings retrieved successfully',
-      data: settings
-    });
-  } catch (error) {
-    console.error('Error in getById:', error);
-    return next(apiError.internal(error, 'getById'));
-  }
-};
-
-/**
  * Create organization settings
- * POST /api/v1/practice-settings
+ * POST /api/v1/organization-settings
  */
 export const create = async (req, res, next) => {
   try {
@@ -105,13 +79,12 @@ export const create = async (req, res, next) => {
 
 /**
  * Update organization settings
- * PUT /api/v1/practice-settings/:id
+ * PUT /api/v1/organization-settings/:tenantId
  */
 export const update = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const { tenantId } = req.params;
     const userId = req.user?._id || req.body.userId || new mongoose.Types.ObjectId();
-    const tenantId = req.user?.tenantOrgId || req.body.tenantId;
 
     // Validate input
     const validationResult = validateUpdateorganizationSettings(req.body);
@@ -119,9 +92,8 @@ export const update = async (req, res, next) => {
       return next(apiError.badRequest(validationResult?.msg, 'update'));
     }
 
-    // Update settings
-    const settings = await organizationSettingsService.updateSettings(
-      id,
+    // Update settings by tenant ID
+    const settings = await organizationSettingsService.updateSettingsByTenant(
       tenantId,
       req.body,
       userId
@@ -139,117 +111,55 @@ export const update = async (req, res, next) => {
 };
 
 /**
- * Update specific section of settings
- * PATCH /api/v1/practice-settings/:id/section
+ * Update specific field(s) in organization settings
+ * PATCH /api/v1/organization-settings/:tenantId
+ * 
+ * This unified endpoint handles all partial updates:
+ * - Update logo: { "logo": "url" }
+ * - Delete logo: { "logo": null }
+ * - Update any field: { "organizationName": "New Name", "currency": "EUR" }
+ * - Update multiple fields: { "defaultTaxPercentage": 10, "serviceChargePercentage": 5 }
  */
-export const updateSection = async (req, res, next) => {
+export const updateFields = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { section, ...data } = req.body;
-    const userId = req.user?._id;
-    const tenantId = req.user?.tenantOrgId;
+    const { tenantId } = req.params;
+    const userId = req.user?._id || req.body.userId || new mongoose.Types.ObjectId();
 
     // Validate input
-    const validationResult = validateUpdateSection(req.body);
+    const validationResult = validateUpdateorganizationSettings(req.body);
     if (validationResult?.error) {
-      return next(apiError.badRequest(validationResult?.msg, 'updateSection'));
+      return next(apiError.badRequest(validationResult?.msg, 'updateFields'));
     }
 
-    // Update section
-    const settings = await organizationSettingsService.updateSection(
-      id,
+    // Update settings by tenant ID
+    const settings = await organizationSettingsService.updateSettingsByTenant(
       tenantId,
-      section,
-      data,
+      req.body,
       userId
     );
 
     return res.status(200).send({
       isSuccess: true,
-      message: `${section} section updated successfully`,
+      message: 'Organization settings updated successfully',
       data: settings
     });
   } catch (error) {
-    console.error('Error in updateSection:', error);
-    return next(apiError.internal(error, 'updateSection'));
-  }
-};
-
-/**
- * Update logo
- * PATCH /api/v1/practice-settings/:id/logo
- */
-export const updateLogo = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const { logo } = req.body;
-    const userId = req.user?._id;
-    const tenantId = req.user?.tenantOrgId;
-
-    if (!logo) {
-      return next(apiError.badRequest('Logo is required', 'updateLogo'));
-    }
-
-    // Update logo
-    const settings = await organizationSettingsService.updateLogo(
-      id,
-      tenantId,
-      logo,
-      userId
-    );
-
-    return res.status(200).send({
-      isSuccess: true,
-      message: 'Logo updated successfully',
-      data: settings
-    });
-  } catch (error) {
-    console.error('Error in updateLogo:', error);
-    return next(apiError.internal(error, 'updateLogo'));
-  }
-};
-
-/**
- * Delete logo
- * DELETE /api/v1/practice-settings/:id/logo
- */
-export const deleteLogo = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user?._id;
-    const tenantId = req.user?.tenantOrgId;
-
-    // Delete logo
-    const settings = await organizationSettingsService.deleteLogo(
-      id,
-      tenantId,
-      userId
-    );
-
-    return res.status(200).send({
-      isSuccess: true,
-      message: 'Logo deleted successfully',
-      data: settings
-    });
-  } catch (error) {
-    console.error('Error in deleteLogo:', error);
-    return next(apiError.internal(error, 'deleteLogo'));
+    console.error('Error in updateFields:', error);
+    return next(apiError.internal(error, 'updateFields'));
   }
 };
 
 /**
  * Delete organization settings (soft delete)
- * DELETE /api/v1/practice-settings/:id
+ * DELETE /api/v1/organization-settings/:tenantId
  */
 export const deleteSettings = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userId = req.user?._id;
-    const tenantId = req.user?.tenantOrgId;
+    const { tenantId } = req.params;
+    const userId = req.user?._id || req.body.userId || new mongoose.Types.ObjectId();
 
-    // Delete settings
-    const settings = await organizationSettingsService.deleteSettings(
-      id,
+    // Delete settings by tenant ID
+    const settings = await organizationSettingsService.deleteSettingsByTenant(
       tenantId,
       userId
     );
@@ -267,17 +177,15 @@ export const deleteSettings = async (req, res, next) => {
 
 /**
  * Restore archived settings
- * PATCH /api/v1/practice-settings/:id/restore
+ * PATCH /api/v1/organization-settings/:tenantId/restore
  */
 export const restoreSettings = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const userId = req.user?._id;
-    const tenantId = req.user?.tenantOrgId;
+    const { tenantId } = req.params;
+    const userId = req.user?._id || req.body.userId || new mongoose.Types.ObjectId();
 
-    // Restore settings
-    const settings = await organizationSettingsService.restoreSettings(
-      id,
+    // Restore settings by tenant ID
+    const settings = await organizationSettingsService.restoreSettingsByTenant(
       tenantId,
       userId
     );
@@ -379,12 +287,9 @@ export const validateOrder = async (req, res, next) => {
 
 export default {
   getByTenant,
-  getById,
   create,
   update,
-  updateSection,
-  updateLogo,
-  deleteLogo,
+  updateFields,
   deleteSettings,
   restoreSettings,
   getSubscriptionStatus,

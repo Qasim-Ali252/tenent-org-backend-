@@ -73,6 +73,96 @@ class OrganizationSettingsService extends GlobalService {
   }
 
   /**
+   * Update Organization settings by tenant ID
+   * @param {String} tenantId - Tenant ID
+   * @param {Object} data - Update data
+   * @param {String} userId - User ID modifying the settings
+   * @returns {Object} Updated settings
+   */
+  async updateSettingsByTenant(tenantId, data, userId) {
+    // Get existing settings by tenant ID
+    const settings = await this.getByTenant(tenantId);
+    
+    if (!settings) {
+      throw apiError.notFound('Organization settings not found for this tenant');
+    }
+
+    // Validate dates if being updated
+    if (data.startDate || data.endDate) {
+      const startDate = data.startDate ? new Date(data.startDate) : settings.startDate;
+      const endDate = data.endDate ? new Date(data.endDate) : settings.endDate;
+      
+      if (endDate <= startDate) {
+        throw apiError.badRequest('End date must be after start date');
+      }
+    }
+
+    // Update settings using the settings ID
+    return await this.update(
+      settings._id,
+      {
+        ...data,
+        modifiedUser: userId
+      },
+      {},
+      tenantId
+    );
+  }
+
+  /**
+   * Delete Organization settings by tenant ID (soft delete)
+   * @param {String} tenantId - Tenant ID
+   * @param {String} userId - User ID deleting the settings
+   * @returns {Object} Updated settings
+   */
+  async deleteSettingsByTenant(tenantId, userId) {
+    const settings = await this.getByTenant(tenantId);
+    
+    if (!settings) {
+      throw apiError.notFound('Organization settings not found for this tenant');
+    }
+
+    return await this.update(
+      settings._id,
+      {
+        status: 'ARCHIVED',
+        modifiedUser: userId
+      },
+      {},
+      tenantId
+    );
+  }
+
+  /**
+   * Restore archived settings by tenant ID
+   * @param {String} tenantId - Tenant ID
+   * @param {String} userId - User ID restoring the settings
+   * @returns {Object} Updated settings
+   */
+  async restoreSettingsByTenant(tenantId, userId) {
+    // Need to find archived settings (not just ACTIVE)
+    const settings = await this.getOneByConditions(
+      { tenantId, status: 'ARCHIVED' },
+      {},
+      tenantId
+    );
+    
+    if (!settings) {
+      throw apiError.notFound('Archived settings not found for this tenant');
+    }
+
+    return await this.update(
+      settings._id,
+      {
+        status: 'ACTIVE',
+        modifiedUser: userId
+      },
+      {},
+      tenantId
+    );
+  }
+
+  /**
    * Update Organization settings
    * @param {String} settingsId - Settings ID
    * @param {String} tenantId - Tenant ID
