@@ -1,5 +1,5 @@
 import GlobalService from '../../../utils/globalService.js';
-import UserModel from './model.js';
+import { UserModel } from '../../users/model.js'; // Use the main user model
 import { apiError, generateToken, generateRefreshToken } from '../../../utils/index.js';
 
 /**

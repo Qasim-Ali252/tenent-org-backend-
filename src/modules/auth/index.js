@@ -1,6 +1,6 @@
 // Models
 import EmployeeModel from './employees/model.js';
-import UserModel from './users/model.js';
+import { UserModel } from '../users/model.js'; // Use the main user model
 import RoleModel from './roles/model.js';
 
 // Services
