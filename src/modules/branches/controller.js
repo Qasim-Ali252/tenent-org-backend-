@@ -15,14 +15,92 @@ import {
  */
 
 /**
- * Get all branches for a tenant
+ * Get all branches with flexible filtering
  * GET /api/v1/branches
+ * 
+ * Query Parameters:
+ * - status: Filter by status (ACTIVE, INACTIVE, DRAFT, ARCHIVED, PENDING, SUSPENDED)
+ * - page: Page number (default: 1)
+ * - limit: Items per page (default: 10)
+ * - search: Search by name, code, or city
+ * - capability: Filter by capability (hasDineIn, hasTakeaway, hasDelivery, hasDriveThru, hasKiosk)
+ * - code: Get branch by specific code
+ * - id: Get branch by specific ID
+ * - nearby: Get nearby branches (requires longitude, latitude, maxDistance)
+ * - longitude: Longitude for nearby search
+ * - latitude: Latitude for nearby search
+ * - maxDistance: Max distance in meters for nearby search (default: 10000)
  */
 export const getAll = async (req, res, next) => {
   try {
-    const tenantId = req.user?.tenantOrgId || req.query.tenantId;
-    const { status, page = 1, limit = 10, search, capability } = req.query;
+    // Get tenantId from user's companyId or query parameter (optional)
+    const tenantId = req.user?.companyId || req.query.tenantId || req.companyId || null;
+    
+    const { 
+      status, 
+      page = 1, 
+      limit = 10, 
+      search, 
+      capability,
+      code,
+      id,
+      nearby,
+      longitude,
+      latitude,
+      maxDistance = 10000
+    } = req.query;
 
+    // Handle specific ID query
+    if (id) {
+      const branch = await branchService.getById(id, {}, tenantId);
+      if (!branch) {
+        return next(apiError.notFound('Branch not found'));
+      }
+      return res.status(200).send({
+        isSuccess: true,
+        message: 'Branch retrieved successfully',
+        data: branch,
+        total: 1
+      });
+    }
+
+    // Handle code query
+    if (code) {
+      const branch = await branchService.getByCode(tenantId, code);
+      if (!branch) {
+        return next(apiError.notFound('Branch not found'));
+      }
+      return res.status(200).send({
+        isSuccess: true,
+        message: 'Branch retrieved successfully',
+        data: branch,
+        total: 1
+      });
+    }
+
+    // Handle nearby query
+    if (nearby === 'true' && longitude && latitude) {
+      const validationResult = validateNearbyQuery({ longitude, latitude, maxDistance });
+      if (validationResult?.error) {
+        return next(apiError.badRequest(validationResult?.msg, 'getAll'));
+      }
+
+      const branches = await branchService.findNearby(
+        tenantId,
+        parseFloat(longitude),
+        parseFloat(latitude),
+        parseInt(maxDistance)
+      );
+
+      return res.status(200).send({
+        isSuccess: true,
+        message: 'Nearby branches retrieved successfully',
+        data: branches,
+        total: branches.length
+      });
+    }
+
+    // Handle regular filtered query with pagination
     const filters = {};
     if (status) filters.status = status;
     if (search) filters.search = search;

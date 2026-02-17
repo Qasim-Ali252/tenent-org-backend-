@@ -1,43 +1,43 @@
 import { Router } from 'express';
 import controller from './controller.js';
-// import { isAuthorized } from '../../middleware/index.js'; // TEMPORARILY DISABLED FOR TESTING
+import isAuthorized from '../../middleware/auth.js';
 
 const router = Router();
 
 /**
  * Branch Routes
- * ⚠️ WARNING: Authentication temporarily disabled for testing
- * TODO: Re-enable isAuthorized middleware before production deployment
+ * All routes are protected with authentication
+ * 
+ * Main GET endpoint supports flexible filtering:
+ * - GET /branches - Get all branches with pagination
+ * - GET /branches?status=ACTIVE - Filter by status
+ * - GET /branches?code=MB-001 - Get by code
+ * - GET /branches?id=123 - Get by ID (or use /branches/:id)
+ * - GET /branches/:id - Get by ID (traditional REST style)
+ * - GET /branches?nearby=true&longitude=-122.4194&latitude=37.7749 - Get nearby
+ * - GET /branches?search=downtown - Search branches
+ * - GET /branches?capability=hasDelivery - Filter by capability
  */
 
-// Get nearby branches (must be before /:id to avoid route conflict)
-router.get('/nearby', controller.getNearby);
+// Single unified GET endpoint with flexible filtering
+router.get('/', isAuthorized, controller.getAll);
 
-// Get active branches
-router.get('/active', controller.getActive);
-
-// Get branch by code
-router.get('/code/:code', controller.getByCode);
-
-// Get all branches
-router.get('/', controller.getAll);
-
-// Get branch by ID
-router.get('/:id', controller.getById);
+// Traditional REST endpoint for getting by ID (must be after other routes)
+router.get('/:id', isAuthorized, controller.getById);
 
 // Create branch
-router.post('/', controller.create);
+router.post('/', isAuthorized, controller.create);
 
 // Update branch
-router.put('/:id', controller.update);
+router.put('/:id', isAuthorized, controller.update);
 
 // Update branch status
-router.patch('/:id/status', controller.updateStatus);
+router.patch('/:id/status', isAuthorized, controller.updateStatus);
 
 // Update branch manager
-router.patch('/:id/manager', controller.updateManager);
+router.patch('/:id/manager', isAuthorized, controller.updateManager);
 
 // Delete branch (soft delete)
-router.delete('/:id', controller.deleteBranch);
+router.delete('/:id', isAuthorized, controller.deleteBranch);
 
 export default router;
