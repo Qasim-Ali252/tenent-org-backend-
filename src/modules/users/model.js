@@ -14,8 +14,9 @@ export const userSchema = mongoose.Schema(
     },
     username: {
       type: String,
-      required: true,
-      unique: true
+      required: false,
+      unique: true,
+      sparse: true
     },
     email: {
       type: String,
@@ -110,4 +111,4 @@ userSchema.methods.checkPassword = async function (password) {
   }
 };
 
-export const UserModel = mongoose.model('User', userSchema);
+export const UserModel = mongoose.models.User || mongoose.model('User', userSchema);

@@ -24,12 +24,6 @@ export const validateRegister = (data) => {
       'string.pattern.base': 'Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character',
       'string.empty': 'Password is required'
     }),
-    username: Joi.string().min(3).max(50).lowercase().pattern(/^[a-z0-9._-]+$/).required().messages({
-      'string.min': 'Username must be at least 3 characters',
-      'string.max': 'Username cannot exceed 50 characters',
-      'string.pattern.base': 'Username can only contain lowercase letters, numbers, dots, underscores, and hyphens',
-      'string.empty': 'Username is required'
-    }),
     companyId: Joi.string().optional().allow(null).messages({
       'string.empty': 'Company ID cannot be empty'
     }),
@@ -95,8 +89,7 @@ export const validateChangePassword = (data) => {
       'string.empty': 'Confirm password is required'
     })
   });
-
-  const result = schema.validate(data);
+ const result = schema.validate(data);
   return {
     error: result?.error,
     msg: result?.error?.details?.[0]?.message
@@ -149,11 +142,6 @@ export const validateUpdateProfile = (data) => {
     fullName: Joi.string().min(2).max(50).optional().messages({
       'string.min': 'Full name must be at least 2 characters',
       'string.max': 'Full name cannot exceed 50 characters'
-    }),
-    username: Joi.string().min(3).max(50).lowercase().pattern(/^[a-z0-9._-]+$/).optional().messages({
-      'string.min': 'Username must be at least 3 characters',
-      'string.max': 'Username cannot exceed 50 characters',
-      'string.pattern.base': 'Username can only contain lowercase letters, numbers, dots, underscores, and hyphens'
     })
   });
 

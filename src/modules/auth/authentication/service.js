@@ -15,27 +15,22 @@ class AuthenticationService {
    * Register new user
    */
   async register(data) {
-    const { email, password, username, fullName, companyId, roleId } = data;
+    const { email, password, fullName, companyId, roleId } = data;
 
     // Check if user already exists
     const existingUser = await UserModel.findOne({
-      $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }]
+      email: email.toLowerCase()
     });
 
     if (existingUser) {
-      if (existingUser.email === email.toLowerCase()) {
-        throw apiError.badRequest('Email already registered');
-      }
-      if (existingUser.username === username.toLowerCase()) {
-        throw apiError.badRequest('Username already taken');
-      }
+      throw apiError.badRequest('Email already registered');
     }
 
     // Create user
     const user = new UserModel({
       fullName,
       email: email.toLowerCase(),
-      username: username.toLowerCase(),
+      username: email.toLowerCase(), // Use email as username since it's required in model
       password, // Will be hashed by pre-save hook
       companyId: companyId || null,
       roleId: roleId || null
@@ -249,7 +244,7 @@ class AuthenticationService {
     }
 
     // Only allow updating certain fields
-    const allowedFields = ['username', 'fullName'];
+    const allowedFields = ['fullName'];
     
     Object.keys(data).forEach(key => {
       if (allowedFields.includes(key)) {

@@ -1,6 +1,6 @@
 import express from 'express';
 import employeeController from './controller.js';
-import { isAuthorized } from '../../../middleware/auth.js';
+import isAuthorized from '../../../middleware/auth.js';
 import { validate } from '../../../validation/index.js';
 import {
   createEmployeeSchema,

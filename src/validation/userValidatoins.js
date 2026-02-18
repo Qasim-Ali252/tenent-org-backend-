@@ -1,11 +1,6 @@
-const Joi = require('joi');
+import Joi from 'joi';
 
-const signInSchema = Joi.object({
+export const signInSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(6).required()
 });
-
-
-module.exports = {
-    signInSchema
-}
