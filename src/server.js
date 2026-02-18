@@ -1,4 +1,6 @@
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import cors from 'cors';
 // import routes from './routes';
@@ -10,7 +12,9 @@ import { compressionMiddleware } from './middleware/index.js';
 const app = express();
 const port = process.env.PORT || 4000;
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '.env') });
 app.use(express.json());
 app.use(compressionMiddleware())
 app.use(cors());

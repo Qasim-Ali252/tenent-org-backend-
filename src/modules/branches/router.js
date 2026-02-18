@@ -26,7 +26,7 @@ router.get('/', isAuthorized, controller.getAll);
 router.get('/:id', isAuthorized, controller.getById);
 
 // Create branch
-router.post('/', isAuthorized, controller.create);
+router.post('/',  controller.create);
 
 // Update branch
 router.put('/:id', isAuthorized, controller.update);
