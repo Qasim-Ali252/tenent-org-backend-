@@ -7,6 +7,56 @@ import Joi from 'joi';
 // Password validation regex
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
+// Grant Access validation (Super Admin creates an admin account)
+export const validateGrantAccess = (data) => {
+  const schema = Joi.object({
+    email: Joi.string().email().required().messages({
+      'string.email': 'Invalid email format',
+      'string.empty': 'Email is required'
+    }),
+    fullName: Joi.string().min(2).max(50).required().messages({
+      'string.min': 'Full name must be at least 2 characters',
+      'string.max': 'Full name cannot exceed 50 characters',
+      'string.empty': 'Full name is required'
+    }),
+    temporaryPassword: Joi.string().min(8).pattern(passwordRegex).optional().messages({
+      'string.min': 'Temporary password must be at least 8 characters',
+      'string.pattern.base': 'Temporary password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character'
+    })
+  });
+
+  const result = schema.validate(data, { abortEarly: false });
+  return {
+    error: result?.error,
+    msg: result?.error?.details?.map(d => d.message).join(', ')
+  };
+};
+
+// Set Password validation (Admin sets password for the first time)
+export const validateSetPassword = (data) => {
+  const schema = Joi.object({
+    email: Joi.string().email().required().messages({
+      'string.email': 'Invalid email format',
+      'string.empty': 'Email is required'
+    }),
+    newPassword: Joi.string().min(8).pattern(passwordRegex).required().messages({
+      'string.min': 'Password must be at least 8 characters',
+      'string.pattern.base': 'Password must contain at least 1 uppercase, 1 lowercase, 1 number, and 1 special character',
+      'string.empty': 'Password is required'
+    }),
+    confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+      'any.only': 'Passwords do not match',
+      'string.empty': 'Confirm password is required'
+    })
+  });
+
+  const result = schema.validate(data, { abortEarly: false });
+  return {
+    error: result?.error,
+    msg: result?.error?.details?.map(d => d.message).join(', ')
+  };
+};
+
 // Register validation
 export const validateRegister = (data) => {
   const schema = Joi.object({
@@ -153,6 +203,8 @@ export const validateUpdateProfile = (data) => {
 };
 
 export default {
+  validateGrantAccess,
+  validateSetPassword,
   validateRegister,
   validateLogin,
   validateRefreshToken,

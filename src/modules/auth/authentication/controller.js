@@ -1,8 +1,10 @@
 import authService from './service.js';
 import { apiError } from '../../../utils/index.js';
 import {
+  validateGrantAccess,
   validateRegister,
   validateLogin,
+  validateSetPassword,
   validateRefreshToken,
   validateChangePassword,
   validateForgotPassword,
@@ -14,6 +16,59 @@ import {
  * Authentication Controller
  * Handles HTTP requests for authentication endpoints
  */
+
+/**
+ * Grant Access — Super Admin creates an admin account
+ * POST /api/v1/auth/grant-access
+ * Protected by x-super-admin-secret header
+ */
+export const grantAccess = async (req, res, next) => {
+  try {
+    const validationResult = validateGrantAccess(req.body);
+    if (validationResult?.error) {
+      return next(apiError.badRequest(validationResult?.msg, 'grantAccess'));
+    }
+
+    const result = await authService.grantAccess(req.body);
+
+    return res.status(201).send({
+      isSuccess: true,
+      message: result.message,
+      data: result.user
+    });
+  } catch (error) {
+    console.error('Error in grantAccess:', error);
+    return next(apiError.internal(error, 'grantAccess'));
+  }
+};
+
+/**
+ * Set Password — Admin sets password for the first time
+ * POST /api/v1/auth/set-password
+ */
+export const setPassword = async (req, res, next) => {
+  try {
+    const validationResult = validateSetPassword(req.body);
+    if (validationResult?.error) {
+      return next(apiError.badRequest(validationResult?.msg, 'setPassword'));
+    }
+
+    const result = await authService.setPassword(req.body);
+
+    return res.status(200).send({
+      isSuccess: true,
+      message: result.message,
+      data: {
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      }
+    });
+  } catch (error) {
+    console.error('Error in setPassword:', error);
+    return next(apiError.internal(error, 'setPassword'));
+  }
+};
 
 /**
  * Register new user
@@ -44,6 +99,8 @@ export const register = async (req, res, next) => {
 /**
  * Login user
  * POST /api/v1/auth/login
+ * If requiresPasswordSetup = true  → frontend redirects to set-password page
+ * If requiresPasswordSetup = false → normal login with tokens
  */
 export const login = async (req, res, next) => {
   try {
@@ -269,6 +326,8 @@ export const updateProfile = async (req, res, next) => {
 };
 
 export default {
+  grantAccess,
+  setPassword,
   register,
   login,
   logout,
