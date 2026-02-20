@@ -103,8 +103,7 @@ class AuthenticationService {
    *   1. Email not found       → Access Denied
    *   2. Account disabled      → Account Disabled
    *   3. isPasswordSet = false → requiresPasswordSetup (admin without password)
-   *   4. isTemporaryPassword = true → Verify password → requiresPasswordChange (force new password)
-   *   5. Normal login          → Verify password → Success
+   *   4. Verify password       → Success (even with temporary password)
    */
   async login(data, ipAddress) {
     const { email, password } = data;
@@ -136,16 +135,7 @@ class AuthenticationService {
       throw apiError.badRequest('Invalid email or password');
     }
 
-    // Step 5: Temporary password check (Super Admin set a temp password)
-    if (user.isTemporaryPassword) {
-      return {
-        requiresPasswordChange: true,
-        message: 'Your temporary password is correct. Please set a permanent password to continue.',
-        email: user.email
-      };
-    }
-
-    // Normal Success Login
+    // Step 5: Success login (No more forced password change)
     const accessToken = await this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user);
 
@@ -156,8 +146,6 @@ class AuthenticationService {
     delete userResponse.resetTokenExpiry;
 
     return {
-      requiresPasswordSetup: false,
-      requiresPasswordChange: false,
       user: userResponse,
       accessToken,
       refreshToken
