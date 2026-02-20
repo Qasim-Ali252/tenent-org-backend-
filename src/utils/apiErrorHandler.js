@@ -28,14 +28,12 @@ export class apiError {
 }
 
 export function apiErrorHandler(err, req, res, next) {
-    const from = err?.from + err?.code;
-
     if (err instanceof apiError) {
-        if (err.code === 500)
-            res.status(500).json({ error: 'Something went wrong.' });
-        else
-            res.status(err.code).json({ isSuccess: false, message: err.message, ...err.params });
-        return;
+        return res.status(err.code || 500).json({ 
+            error: err.message || 'Something went wrong.'
+        });
     }
-    res.status(500).json({ error: 'Something went horribly wrong.' });
+    return res.status(500).json({ 
+        error: err.message || 'Something went horribly wrong.' 
+    });
 }

@@ -1,19 +1,22 @@
-import Joi from 'joi';
+import { apiError } from '../utils/index.js';
 import { signInSchema } from './userValidatoins.js';
 
-// Middleware for validating request body or query with Joi schema
-export function validate(schema, property = 'body') {
-    return (req, res, next) => {
-        const data = req[property];
-        const { error } = schema.validate(data, { abortEarly: false });
-        if (error) {
-            return res.status(400).json({
-                message: 'Validation error',
-                details: error.details.map((d) => d.message),
-            });
-        }
-        next();
-    };
-}
+export const validate = (schema, source = 'body') => (req, res, next) => {
+    const { error, value } = schema.validate(req[source], {
+        abortEarly: false,
+        allowUnknown: true,
+        stripUnknown: true
+    });
+    
+    if (error) {
+        const errorMessage = error.details.map(detail => detail.message).join(', ');
+        return next(apiError.badRequest(errorMessage, 'validation'));
+    }
+    
+    req[source] = value;
+    next();
+};
 
-export { signInSchema };
+export {
+    signInSchema
+};

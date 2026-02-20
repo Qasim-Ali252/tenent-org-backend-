@@ -1,6 +1,6 @@
 import express from 'express';
 import userController from './controller.js';
-import  isAuthorized  from '../../../middleware/auth.js';
+import isAuthorized from '../../../middleware/auth.js';
 import { validate } from '../../../validation/index.js';
 import {
   createUserSchema,

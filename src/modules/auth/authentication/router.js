@@ -5,8 +5,37 @@ import isAuthorized from '../../../middleware/auth.js';
 const router = Router();
 
 /**
+ * Super Admin middleware — protects the grant-access endpoint.
+ * Pass header: x-super-admin-secret: <value from SUPER_ADMIN_SECRET env var>
+ */
+const superAdminGuard = (req, res, next) => {
+  const secret = req.headers['x-super-admin-secret'];
+  const expected = process.env.SUPER_ADMIN_SECRET;
+
+  if (!expected) {
+    return res.status(500).json({
+      error: 'SUPER_ADMIN_SECRET is not configured on the server.'
+    });
+  }
+
+  if (!secret || secret !== expected) {
+    return res.status(403).json({
+      error: 'Access denied. Invalid or missing super admin secret.'
+    });
+  }
+
+  next();
+};
+
+/**
  * Authentication Routes
  */
+
+// Super Admin — grant access to a new admin (Postman only, no dashboard yet)
+router.post('/grant-access', superAdminGuard, controller.grantAccess);
+
+// Admin — set password for first time (no auth token required)
+router.post('/set-password', controller.setPassword);
 
 // Public routes (no authentication required)
 router.post('/register', controller.register);

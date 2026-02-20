@@ -14,8 +14,9 @@ export const userSchema = mongoose.Schema(
     },
     username: {
       type: String,
-      required: true,
-      unique: true
+      required: false,
+      unique: true,
+      sparse: true
     },
     email: {
       type: String,
@@ -24,8 +25,17 @@ export const userSchema = mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: false,  // Not required on creation (admin starts with null password)
+      default: null,
       minlength: 8
+    },
+    isPasswordSet: {
+      type: Boolean,
+      default: false  // false until admin sets their password for the first time
+    },
+    isTemporaryPassword: {
+      type: Boolean,
+      default: false  // true if set by admin as temporary
     },
     companyId: {
       type: mongoose.Types.ObjectId,
@@ -51,8 +61,8 @@ export const userSchema = mongoose.Schema(
     },
     accountType: {
       type: String,
-      enum: ["user", "owner"],
-      default: "owner",
+      enum: ["user", "owner", "admin", "superadmin"],
+      default: "admin",
       lowercase: true
     },
     isAccountEnable: {
@@ -73,7 +83,8 @@ export const userSchema = mongoose.Schema(
 )
 
 userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) {
+  // Skip hashing if password is not set or not modified
+  if (!this.password || !this.isModified('password')) {
     return next();
   }
   try {
@@ -110,4 +121,4 @@ userSchema.methods.checkPassword = async function (password) {
   }
 };
 
-export const UserModel = mongoose.model('User', userSchema);
+export const UserModel = mongoose.models.User || mongoose.model('User', userSchema);

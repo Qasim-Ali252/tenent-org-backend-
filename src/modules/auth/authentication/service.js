@@ -1,41 +1,80 @@
 import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
 import { UserModel } from '../../users/model.js'; // Use the main user model from src/modules/users
+import RoleModel from '../../users/roles-permissions/model.js';
 import { generateToken, generateRefreshToken } from '../../../utils/token.js';
 import { apiError } from '../../../utils/index.js';
 import { config } from '../../../config/index.js';
 
-/**
- * Authentication Service
- * Handles user registration, login, logout, and token management
- */
+
 class AuthenticationService {
-  
+
   /**
-   * Register new user
+   * Grant Access — Super Admin creates an admin account
+   * Admin can be created with a temporary password or no password.
+   */
+  async grantAccess(data) {
+    const { email, fullName, temporaryPassword } = data;
+
+    // Check if user already exists
+    const existingUser = await UserModel.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      throw apiError.badRequest('An account with this email already exists');
+    }
+
+    // Find or create the default 'admin' role
+    let adminRole = await RoleModel.findOne({ name: 'admin' });
+    if (!adminRole) {
+      adminRole = new RoleModel({ name: 'admin', permissions: [] });
+      await adminRole.save();
+    }
+
+    // Create admin account
+    const user = new UserModel({
+      fullName,
+      email: email.toLowerCase(),
+      username: email.toLowerCase(),
+      password: temporaryPassword || null,
+      isPasswordSet: !!temporaryPassword, // true if temporaryPassword provided
+      isTemporaryPassword: !!temporaryPassword, // true if temporaryPassword provided
+      accountType: 'admin',
+      roleId: adminRole._id,
+      isAccountEnable: true
+    });
+
+    await user.save();
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    return {
+      message: temporaryPassword 
+        ? `Admin account created with temporary password. ${email} must change it on login.`
+        : `Admin account created. ${email} can now log in and set their password.`,
+      user: userResponse
+    };
+  }
+
+  /**
+   * Register new user (kept for backward compatibility)
    */
   async register(data) {
-    const { email, password, username, fullName, companyId, roleId } = data;
+    const { email, password, fullName, companyId, roleId } = data;
 
     // Check if user already exists
     const existingUser = await UserModel.findOne({
-      $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }]
+      email: email.toLowerCase()
     });
 
     if (existingUser) {
-      if (existingUser.email === email.toLowerCase()) {
-        throw apiError.badRequest('Email already registered');
-      }
-      if (existingUser.username === username.toLowerCase()) {
-        throw apiError.badRequest('Username already taken');
-      }
+      throw apiError.badRequest('Email already registered');
     }
 
     // Create user
     const user = new UserModel({
       fullName,
       email: email.toLowerCase(),
-      username: username.toLowerCase(),
+      username: email.toLowerCase(), 
       password, // Will be hashed by pre-save hook
       companyId: companyId || null,
       roleId: roleId || null
@@ -60,32 +99,53 @@ class AuthenticationService {
 
   /**
    * Login user
+   * Flow:
+   *   1. Email not found       → Access Denied
+   *   2. Account disabled      → Account Disabled
+   *   3. isPasswordSet = false → requiresPasswordSetup (admin without password)
+   *   4. isTemporaryPassword = true → Verify password → requiresPasswordChange (force new password)
+   *   5. Normal login          → Verify password → Success
    */
   async login(data, ipAddress) {
     const { email, password } = data;
 
-    // Find user with password
-    const user = await UserModel.findOne({
-      email: email.toLowerCase()
-    });
+    // Step 1: Find user
+    const user = await UserModel.findOne({ email: email.toLowerCase() });
 
     if (!user) {
-      throw apiError.badRequest('Invalid email or password');
+      throw apiError.forbidden('Access denied. No account found for this email. Contact your Super Admin.');
     }
 
-    // Check if account is enabled
+    // Step 2: Check if account is enabled
     if (!user.isAccountEnable) {
-      throw apiError.badRequest('Account is disabled');
+      throw apiError.badRequest('Account is disabled. Contact your Super Admin.');
     }
 
-    // Verify password using the model's checkPassword method
+    // Step 3: First-time login — password not set at all (Admin starts with null password)
+    if (!user.isPasswordSet) {
+      return {
+        requiresPasswordSetup: true,
+        message: 'Please set your password to continue.',
+        email: user.email
+      };
+    }
+
+    // Step 4: Verify password
     const isPasswordValid = await user.checkPassword(password);
-    
     if (!isPasswordValid) {
       throw apiError.badRequest('Invalid email or password');
     }
 
-    // Generate tokens
+    // Step 5: Temporary password check (Super Admin set a temp password)
+    if (user.isTemporaryPassword) {
+      return {
+        requiresPasswordChange: true,
+        message: 'Your temporary password is correct. Please set a permanent password to continue.',
+        email: user.email
+      };
+    }
+
+    // Normal Success Login
     const accessToken = await this.generateAccessToken(user);
     const refreshToken = await this.generateRefreshToken(user);
 
@@ -96,6 +156,54 @@ class AuthenticationService {
     delete userResponse.resetTokenExpiry;
 
     return {
+      requiresPasswordSetup: false,
+      requiresPasswordChange: false,
+      user: userResponse,
+      accessToken,
+      refreshToken
+    };
+  }
+
+  /**
+   * Set Password — Admin sets password for the first time
+   * Resets both isPasswordSet and isTemporaryPassword flags.
+   */
+  async setPassword(data) {
+    const { email, newPassword } = data;
+
+    // Find user by email
+    const user = await UserModel.findOne({ email: email.toLowerCase() });
+
+    if (!user) {
+      throw apiError.notFound('No account found for this email');
+    }
+
+    if (!user.isAccountEnable) {
+      throw apiError.badRequest('Account is disabled');
+    }
+
+    // Use this endpoint for either first-time setup OR replacing a temporary password
+    if (user.isPasswordSet && !user.isTemporaryPassword) {
+      throw apiError.badRequest('Password is already set. Use the change-password endpoint instead.');
+    }
+
+    // Set password and mark as permanent
+    user.password = newPassword; 
+    user.isPasswordSet = true;
+    user.isTemporaryPassword = false;
+    await user.save();
+
+    // Auto-login after setting password — generate tokens
+    const accessToken = await this.generateAccessToken(user);
+    const refreshToken = await this.generateRefreshToken(user);
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.resetToken;
+    delete userResponse.resetTokenExpiry;
+
+    return {
+      message: 'Permanent password set successfully. You are now logged in.',
       user: userResponse,
       accessToken,
       refreshToken
@@ -182,8 +290,7 @@ class AuthenticationService {
       // Don't reveal if email exists
       return { message: 'If email exists, reset instructions have been sent' };
     }
-
-    // Generate reset token
+      // Generate reset token
     const resetToken = uuidv4();
     const resetTokenExpiry = Date.now() + (15 * 60 * 1000); // 15 minutes
 
@@ -249,7 +356,7 @@ class AuthenticationService {
     }
 
     // Only allow updating certain fields
-    const allowedFields = ['username', 'fullName'];
+    const allowedFields = ['fullName'];
     
     Object.keys(data).forEach(key => {
       if (allowedFields.includes(key)) {
