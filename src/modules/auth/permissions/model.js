@@ -27,9 +27,25 @@ const permissionSchema = new Schema({
     trim: true,
     index: true
   },
+  route: {
+    type: String,
+    default: null,
+    trim: true
+  },
+  method: {
+    type: String,
+    default: null,
+    uppercase: true,
+    trim: true,
+    enum: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', null, 'ALL']
+  },
   description: descriptionField(500),
   displayOrder: displayOrderField,
-  isActive: isActiveField
+  isActive: isActiveField,
+  isSystem: {
+    type: Boolean,
+    default: false
+  }
 }, basicSchemaOptions);
 
 // Indexes
