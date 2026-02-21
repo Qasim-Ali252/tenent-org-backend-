@@ -23,6 +23,10 @@ const roleSchema = new Schema({
   },
   name: nameField(100, 'Role name'),
   description: descriptionField(500),
+  color: {
+    type: String,
+    default: ""
+  },
   permissions: createArrayReferenceField('Permission'),
   scope: {
     type: String,
