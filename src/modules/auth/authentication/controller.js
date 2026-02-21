@@ -25,7 +25,6 @@ export const grantAccess = async (req, res, next) => {
     }
 
     const result = await authService.grantAccess(req.body);
-
     return res.status(201).send({
       isSuccess: true,
       message: result.message,

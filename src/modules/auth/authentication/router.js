@@ -7,14 +7,12 @@ const router = Router();
 const superAdminGuard = (req, res, next) => {
   const secret = req.headers['x-super-admin-secret'];
   const expected = process.env.SUPER_ADMIN_SECRET;
-
   if (!expected) {
     return res.status(500).json({
       error: 'SUPER_ADMIN_SECRET is not configured on the server.'
     });
   }
-
-  if (!secret || secret !== expected) {
+ if (!secret || secret !== expected) {
     return res.status(403).json({
       error: 'Access denied. Invalid or missing super admin secret.'
     });
