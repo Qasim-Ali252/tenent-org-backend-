@@ -17,7 +17,12 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '.env') });
 app.use(express.json());
 app.use(compressionMiddleware())
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000', // Allow frontend origin
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Allowed methods
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-tenant-domain'], // Include x-tenant-domain
+    credentials: true, // Allow credentials (cookies, authorization headers)
+}));
 routes(app)
 
 app.use(({ next }) => next(new apiError(404, 'Not found', 'server')))
