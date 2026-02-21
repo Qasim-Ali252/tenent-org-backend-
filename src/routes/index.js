@@ -10,6 +10,7 @@ import products from '../modules/menu/products/router.js'
 import employees from '../modules/auth/employees/router.js'
 import authUsers from '../modules/auth/users/router.js'
 import authRoles from '../modules/auth/roles/router.js'
+import authPermissions from '../modules/auth/permissions/router.js'
 
 export default (app) => {
     const apiV1Router = express.Router()
@@ -21,6 +22,7 @@ export default (app) => {
     apiV1Router.use('/employees', employees)
     apiV1Router.use('/users', authUsers)
     apiV1Router.use('/roles', authRoles)
+    apiV1Router.use('/permissions', authPermissions)
     
     // Other routes
     apiV1Router.use('/users', users)
