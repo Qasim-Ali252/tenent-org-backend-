@@ -13,11 +13,6 @@ import {
 } from './validation.js';
 
 /**
- * Authentication Controller
- * Handles HTTP requests for authentication endpoints
- */
-
-/**
  * Grant Access — Super Admin creates an admin account
  * POST /api/v1/auth/grant-access
  * Protected by x-super-admin-secret header
@@ -30,7 +25,6 @@ export const grantAccess = async (req, res, next) => {
     }
 
     const result = await authService.grantAccess(req.body);
-
     return res.status(201).send({
       isSuccess: true,
       message: result.message,
